@@ -1,19 +1,17 @@
 import {getDb} from '../db'
 import debug from 'debug'
+import Timer from '../timer'
 
 const dbg = debug('app:provider:data')
 
-export async function index(opts={}) {
-  dbg('index: opts=%o', opts)
+export async function lookup(query={}, opts={}) {
+  dbg('lookup: query=%o, opts=%o', query, opts)
 
   const db = await getDb()
-  // return await db.collection('cmsProviderLocations')
-  //   .find()
-  //   .skip(opts.skip || 0)
-  //   .limit(opts.limit || 10)
-  //   .toArray()
 
-  return await db.collection('cmsProviderLocations')
+  const timer = new Timer('provider-lookup')
+
+  const result = await db.collection('cmsProviderLocations')
   .aggregate(
     [
       {
@@ -32,16 +30,18 @@ export async function index(opts={}) {
           as: 'location'
         }
       },
+      {$match: {'provider.lastName': 'LOPEZ'}},
       {$unwind: '$provider'},
       {$unwind: '$location'},
       {
         $project: {
-          npi: 1,
-          address: 1,
+          npi: '$provider.npi',
           firstName: '$provider.firstName',
+          middleName: '$provider.middleName',
           lastName: '$provider.lastName',
           specialties: '$provider.specialties',
           orgName: '$location.orgName',
+          address: '$location.address',
           phone: '$location.phone'
         }
       }
@@ -50,4 +50,26 @@ export async function index(opts={}) {
   .skip(opts.skip || 0)
   .limit(opts.limit || 10)
   .toArray()
+
+  timer.stop()
+  dbg('timer=%o', timer.toString())
+  return result
+}
+
+export async function index(query={}, opts={}) {
+  dbg('index2: query=%o, opts=%o', query, opts)
+
+  const db = await getDb()
+
+  const timer = new Timer('provider-index')
+
+  const result = await db.collection('cmsDenormedProviderLocations')
+  .find(query)
+  .skip(opts.skip || 0)
+  .limit(opts.limit || 10)
+  .toArray()
+
+  timer.stop()
+  dbg('timer=%o', timer.toString())
+  return result
 }
