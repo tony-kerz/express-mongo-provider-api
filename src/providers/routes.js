@@ -1,51 +1,42 @@
 import express from 'express'
 import debug from 'debug'
 import _ from 'lodash'
-import {lookup, index} from './data'
+import {index} from './data'
+import geocode from '../geocode'
 
 const dbg = debug('app:provider:routes')
 const router = express.Router()
 
-router.get('/lookup', (req, res)=>{
-  dbg('get: req.query=%o', req.query)
-  lookup(getQuery(req), getOpts(req))
-  .then((providers)=>{
-    res.send(providers)
-  })
-})
+// /providers?nearAddress={some address}&nearMiles=10
 
 router.get('/', (req, res)=>{
   dbg('get: req.query=%o', req.query)
-  index(getQuery(req), getOpts(req))
-  .then((providers)=>{
-    res.send(providers)
+
+  getOpts(req).then((opts)=>{
+    index(opts).then((result)=>{
+      res.send(result)
+    })
   })
 })
 
-function getOpts(req) {
-  return _.reduce(
+async function getOpts(req) {
+  const opts = _.transform(
     req.query,
-    (result, value, key)=>{
-      if (['skip', 'limit'].includes(key)) {
+    async (result, value, key)=>{
+      if (['skip', 'limit', 'nearMiles'].includes(key)) {
         result[key] = parseInt(value)
-      }
-      return result
-    },
-    {}
-  )
-}
-
-function getQuery(req) {
-  return _.reduce(
-    req.query,
-    (result, value, key)=>{
-      if (!['skip', 'limit'].includes(key)) {
+      } else {
         result[key] = value
       }
-      return result
     },
     {}
   )
+  const {nearAddress} = req.query
+  if (nearAddress) {
+    opts.nearCoordinates = await geocode(nearAddress)
+    delete opts.nearAddress
+  }
+  return opts
 }
 
 export default router
