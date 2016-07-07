@@ -1,70 +1,49 @@
-import {getDb} from '../db'
 import debug from 'debug'
+import _ from 'lodash'
+import {getDb} from '../db'
 import Timer from '../timer'
 
 const dbg = debug('app:provider:data')
+const mileToMeterMultiplier = 0.00062137
 
-export async function lookup(query={}, opts={}) {
-  dbg('lookup: query=%o, opts=%o', query, opts)
+export async function index(opts={}) {
+  dbg('index: opts=%o', opts)
 
   const db = await getDb()
 
-  const timer = new Timer('provider-lookup')
+  const timer = new Timer('provider-geo')
 
-  const result = await db.collection('cmsProviderLocations')
-  .aggregate(
+  const query = _.transform(
+    opts,
+    (result, value, key)=>{
+      if (!['skip', 'limit', 'nearCoordinates', 'nearMiles'].includes(key)) {
+        result[key] = value
+      }
+    },
+    {}
+  )
+
+  const collection = db.collection('cmsDenormedProviderLocations')
+
+  const cursor = opts.nearCoordinates ?
+  collection.aggregate(
     [
       {
-        $lookup: {
-          from: 'cmsProviders',
-          localField: 'providerId',
-          foreignField: '_id',
-          as: 'provider'
-        }
-      },
-      {
-        $lookup: {
-          from: 'cmsLocations',
-          localField: 'locationId',
-          foreignField: '_id',
-          as: 'location'
-        }
-      },
-      {$match: {'provider.lastName': 'LOPEZ'}},
-      {$unwind: '$provider'},
-      {$unwind: '$location'},
-      {
-        $project: {
-          npi: '$provider.npi',
-          firstName: '$provider.firstName',
-          middleName: '$provider.middleName',
-          lastName: '$provider.lastName',
-          specialties: '$provider.specialties',
-          orgName: '$location.orgName',
-          address: '$location.address',
-          phone: '$location.phone'
+        $geoNear: {
+          near: {type: 'Point', coordinates: opts.nearCoordinates},
+          distanceField: 'distance',
+          maxDistance: (opts.nearMiles || 10)/mileToMeterMultiplier,
+          query,
+          spherical: true,
+          distanceMultiplier: mileToMeterMultiplier
         }
       }
     ]
   )
-  .skip(opts.skip || 0)
-  .limit(opts.limit || 10)
-  .toArray()
+  :
+  collection.find(query)
 
-  timer.stop()
-  dbg('timer=%o', timer.toString())
-  return result
-}
-
-export async function index(query={}, opts={}) {
-  dbg('index2: query=%o, opts=%o', query, opts)
-
-  const db = await getDb()
-
-  const timer = new Timer('provider-index')
-
-  const result = await db.collection('cmsDenormedProviderLocations')
-  .find(query)
+  const result = await cursor
   .skip(opts.skip || 0)
   .limit(opts.limit || 10)
   .toArray()
