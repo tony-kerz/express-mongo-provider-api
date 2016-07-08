@@ -17,6 +17,9 @@ export async function index(opts={}) {
     opts,
     (result, value, key)=>{
       if (!['skip', 'limit', 'nearCoordinates', 'nearMiles'].includes(key)) {
+        if (value.startsWith('/') && value.endsWith('/')) {
+          value = new RegExp(value.slice(1, -1))
+        }
         result[key] = value
       }
     },

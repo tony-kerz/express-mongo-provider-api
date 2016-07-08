@@ -23,6 +23,7 @@ async function getOpts(req) {
   const opts = _.transform(
     req.query,
     async (result, value, key)=>{
+      dbg('get-opts: result=%o, value=%o, key=%o', result, value, key)
       if (['skip', 'limit', 'nearMiles'].includes(key)) {
         result[key] = parseInt(value)
       } else {

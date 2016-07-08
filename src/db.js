@@ -1,11 +1,12 @@
 import debug from 'debug'
 import mongodb from 'mongodb'
+import config from 'config'
 
 const dbg = debug('app:db')
 const client = mongodb.MongoClient
 
 export async function getDb() {
-  dbg('get-db')
-  // don't hardcode url :(
-  return await client.connect('mongodb://localhost:27017/test')
+  const url = config.get('mongo.url')
+  dbg('get-db: url=%o', url)
+  return await client.connect(url)
 }
