@@ -1,9 +1,10 @@
 import debug from 'debug'
 import _ from 'lodash'
+import assert from 'assert'
 import {getDb} from '../db'
 import Timer from '../timer'
 
-const dbg = debug('app:provider:data')
+const dbg = debug('app:provider-locations:data')
 const mileToMeterMultiplier = 0.00062137
 
 export async function index(opts={}) {
@@ -16,9 +17,14 @@ export async function index(opts={}) {
   const query = _.transform(
     opts,
     (result, value, key)=>{
-      if (!['skip', 'limit', 'nearCoordinates', 'nearMiles'].includes(key)) {
-        if (value.startsWith('/') && value.endsWith('/')) {
-          value = new RegExp(value.slice(1, -1))
+      if (!['skip', 'limit', 'nearCoordinates', 'nearMiles', 'sort'].includes(key)) {
+        if (Array.isArray(value)) {
+          value = {$in: value}
+        } else if (value.startsWith('/')) {
+          const toks = value.split('/').filter((val)=>{return val != ''})
+          dbg('toks=%o', toks)
+          assert(toks[0])
+          value = {$regex: toks[0], $options: toks[1] || ''}
         }
         result[key] = value
       }
@@ -26,7 +32,24 @@ export async function index(opts={}) {
     {}
   )
 
-  const collection = db.collection('cmsDenormedProviderLocations')
+  dbg('index: query=%o', query)
+
+  const sort = _.reduce(
+    Array.isArray(opts.sort) ? opts.sort : [opts.sort],
+    (result, value)=>{
+      if (value.startsWith('-')) {
+        result[value.substring(1)] = -1
+      } else {
+        result[value] = 1
+      }
+      return result
+    },
+    {}
+  )
+
+  dbg('index: sort=%o', sort)
+
+  const collection = db.collection('cmsProviderLocationsView')
 
   const cursor = opts.nearCoordinates ?
   collection.aggregate(
@@ -49,6 +72,7 @@ export async function index(opts={}) {
   const result = await cursor
   .skip(opts.skip || 0)
   .limit(opts.limit || 10)
+  .sort(sort)
   .toArray()
 
   timer.stop()
