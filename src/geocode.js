@@ -9,7 +9,8 @@ export default async function(address, opts={}) {
     api_key: opts.apiKey || 'search-ND7BVJ',
     ['boundary.country']: 'USA',
     size: 1,
-    text: address
+    text: address,
+    timeout: 2000
   }
 
   const timer = new Timer('geocode')

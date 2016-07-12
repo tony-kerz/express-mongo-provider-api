@@ -1,6 +1,6 @@
 import express from 'express'
 import debug from 'debug'
-import providers from './providers/routes'
+import providerLocations from './provider-locations/routes'
 const dbg = debug('app:provider-api')
 const app = express()
 
@@ -13,7 +13,7 @@ app.get('/', (req, res)=>{
   res.send('api home...')
 })
 
-app.use('/providers', providers)
+app.use('/provider-locations', providerLocations)
 
 const port = 3000
 app.listen(port, ()=>{

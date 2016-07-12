@@ -1,10 +1,27 @@
 # express-mongo-provider-api
 
-this is an [express-js](http://expressjs.com/) app intended to serve up data ingested via [this process](https://github.com/tony-kerz/mongo-provider-ingest).
+this is an [express-js](http://expressjs.com/) app intended to serve up data ingested via [this data flow](https://github.com/tony-kerz/mongo-provider-ingest).
+
+## api
+
+this application supports the following api specifications
+
+- [/provider-locations](doc/provider-locations/index.md)
+
+## data detail
+
+currently this app is going after this [materialized-view](https://github.com/tony-kerz/mongo-provider-ingest#provider-locations-1) which represents a many-to-many relationship between providers and locations.
+
+> there should be indexes on the following fields:
+- `firstName`
+- `lastName`
+- `npi`
+- `specialties`
+- `geoPoint`
 
 ## tech notes
 
-this app shows two access paths:
+an initial exercise was performed comparing the following two access paths:
 
 1. normalized collections and the [$lookup](https://docs.mongodb.com/manual/reference/operator/aggregation/lookup/) feature of mongo to "join" the data dynamically at runtime
 
