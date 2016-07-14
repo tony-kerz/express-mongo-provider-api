@@ -35,7 +35,7 @@ export async function index(opts={}) {
   dbg('index: query=%o', query)
 
   const sort = _.reduce(
-    Array.isArray(opts.sort) ? opts.sort : [opts.sort],
+    opts.sort ? (Array.isArray(opts.sort) ? opts.sort : [opts.sort]) : [],
     (result, value)=>{
       if (value.startsWith('-')) {
         result[value.substring(1)] = -1
