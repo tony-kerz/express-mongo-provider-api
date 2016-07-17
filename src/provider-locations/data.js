@@ -1,39 +1,13 @@
-import debug from 'debug'
 import _ from 'lodash'
 import assert from 'assert'
 import {getDb} from '../db'
-import Timer from '../timer'
 
-const dbg = debug('app:provider-locations:data')
 const mileToMeterMultiplier = 0.00062137
+const collectionName = 'cmsProviderLocationsView'
 
 export async function index(opts={}) {
-  dbg('index: opts=%o', opts)
-
   const db = await getDb()
-
-  const timer = new Timer('provider-geo')
-
-  const query = _.transform(
-    opts,
-    (result, value, key)=>{
-      if (!['skip', 'limit', 'nearCoordinates', 'nearMiles', 'sort'].includes(key)) {
-        if (Array.isArray(value)) {
-          value = {$in: value}
-        } else if (value.startsWith('/')) {
-          const toks = value.split('/').filter((val)=>{return val != ''})
-          dbg('toks=%o', toks)
-          assert(toks[0])
-          value = {$regex: toks[0], $options: toks[1] || ''}
-        }
-        result[key] = value
-      }
-    },
-    {}
-  )
-
-  dbg('index: query=%o', query)
-
+  const query = getQuery(opts)
   const sort = _.reduce(
     opts.sort ? (Array.isArray(opts.sort) ? opts.sort : [opts.sort]) : [],
     (result, value)=>{
@@ -47,35 +21,75 @@ export async function index(opts={}) {
     {}
   )
 
-  dbg('index: sort=%o', sort)
-
-  const collection = db.collection('cmsProviderLocationsView')
-
-  const cursor = opts.nearCoordinates ?
+  const collection = db.collection(collectionName)
+  const coordinates = getCoordinates(opts)
+  const skip = opts.skip || 0
+  const limit = opts.limit || 10
+  const cursor = coordinates ?
   collection.aggregate(
     [
       {
         $geoNear: {
-          near: {type: 'Point', coordinates: opts.nearCoordinates},
+          near: {type: 'Point', coordinates},
           distanceField: 'distance',
           maxDistance: (opts.nearMiles || 10)/mileToMeterMultiplier,
           query,
           spherical: true,
           distanceMultiplier: mileToMeterMultiplier
         }
-      }
+      },
+      {$skip: skip},
+      {$limit: limit}
     ]
   )
   :
+  collection.find(query).sort(sort).skip(skip).limit(limit)
+
+  return await cursor.toArray()
+}
+
+export async function meta(opts={}) {
+  const db = await getDb()
+  const query = getQuery(opts)
+  const collection = db.collection(collectionName)
+  const coordinates = getCoordinates(opts)
+  const countCursor = coordinates ?
+  collection.find({
+    ...query,
+    geoPoint: {
+      $near: {
+        $geometry: {type: 'Point', coordinates},
+        $maxDistance: (opts.nearMiles || 10)/mileToMeterMultiplier
+      }
+    }
+  })
+  :
   collection.find(query)
 
-  const result = await cursor
-  .skip(opts.skip || 0)
-  .limit(opts.limit || 10)
-  .sort(sort)
-  .toArray()
+  const count = await countCursor.count()
 
-  timer.stop()
-  dbg('timer=%o', timer.toString())
-  return result
+  return {count}
+}
+
+function getQuery(opts) {
+  return _.transform(
+    opts,
+    (result, value, key)=>{
+      if (!['skip', 'limit', 'nearLat', 'nearLon', 'nearMiles', 'sort'].includes(key)) {
+        if (Array.isArray(value)) {
+          value = {$in: value}
+        } else if (value.startsWith('/')) {
+          const toks = value.split('/').filter((val)=>{return val != ''})
+          assert(toks[0])
+          value = {$regex: toks[0], $options: toks[1] || ''}
+        }
+        result[key] = value
+      }
+    },
+    {}
+  )
+}
+
+function getCoordinates(opts) {
+  return (opts.nearLat && opts.nearLon) ? [opts.nearLon, opts.nearLat] : null
 }

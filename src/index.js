@@ -1,7 +1,9 @@
+import 'babel-polyfill'
 import express from 'express'
 import debug from 'debug'
 import providerLocations from './provider-locations/routes'
-const dbg = debug('app:provider-api')
+import coordinates from './coordinates/routes'
+const dbg = debug('app:provider-locations')
 const app = express()
 
 process.on('unhandledRejection', (err)=>{
@@ -14,6 +16,7 @@ app.get('/', (req, res)=>{
 })
 
 app.use('/provider-locations', providerLocations)
+app.use('/coordinates', coordinates)
 
 const port = 3000
 app.listen(port, ()=>{
