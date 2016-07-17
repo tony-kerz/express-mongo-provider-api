@@ -1,40 +1,41 @@
 import express from 'express'
 import debug from 'debug'
 import _ from 'lodash'
-import {index} from './data'
-import geocode from '../geocode'
+import {index, meta} from './data'
 
 const dbg = debug('app:provider-locations:routes')
 const router = express.Router()
 
 router.get('/', (req, res)=>{
-  dbg('get: req.query=%o', req.query)
+  dbg('index: req.query=%o', req.query)
 
-  getOpts(req).then((opts)=>{
-    index(opts).then((result)=>{
-      res.send(result)
-    })
+  index(getOpts(req)).then((result)=>{
+    res.send(result)
   })
 })
 
-async function getOpts(req) {
-  const opts = _.transform(
+router.get('/meta', (req, res)=>{
+  dbg('meta: req.query=%o', req.query)
+
+  meta(getOpts(req)).then((result)=>{
+    res.send(result)
+  })
+})
+
+function getOpts(req) {
+  return _.transform(
     req.query,
     (result, value, key)=>{
       if (['skip', 'limit', 'nearMiles'].includes(key)) {
         result[key] = parseInt(value)
+      } else if (['nearLat', 'nearLon'].includes(key)) {
+        result[key] = parseFloat(value)
       } else {
         result[key] = value
       }
     },
     {}
   )
-  const {nearAddress} = req.query
-  if (nearAddress) {
-    opts.nearCoordinates = await geocode(nearAddress)
-    delete opts.nearAddress
-  }
-  return opts
 }
 
 export default router
