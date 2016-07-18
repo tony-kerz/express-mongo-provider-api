@@ -1,11 +1,15 @@
 import _ from 'lodash'
 import assert from 'assert'
+import debug from 'debug'
 import {getDb} from '../db'
+
+const dbg = debug('app:practitioner-locations:data')
 
 const mileToMeterMultiplier = 0.00062137
 const collectionName = 'cmsProviderLocationsView'
 
 export async function index(opts={}) {
+  dbg('index: opts=%o', opts)
   const db = await getDb()
   const query = getQuery(opts)
   const sort = _.reduce(
@@ -49,6 +53,7 @@ export async function index(opts={}) {
 }
 
 export async function meta(opts={}) {
+  dbg('meta: opts=%o', opts)
   const db = await getDb()
   const query = getQuery(opts)
   const collection = db.collection(collectionName)
