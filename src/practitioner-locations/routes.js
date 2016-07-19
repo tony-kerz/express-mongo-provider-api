@@ -5,7 +5,7 @@ import geocode from 'geocodr'
 import {index, meta} from './data'
 import {dbgreq} from '../shared/express-helper'
 
-const dbg = debug('app:provider-locations:routes')
+const dbg = debug('app:practitioner-locations:routes')
 const router = express.Router()
 
 router.get('/', async (req, res)=>{
