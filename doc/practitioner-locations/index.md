@@ -79,15 +79,15 @@
 1. `/practitioner-locations?name.last=/^smi/i`
 1. `/practitioner-locations?name.last=/^SMI&name.first=/^J`
 1. `/practitioner-locations?identifiers.extension=12345`
-1. `/practitioner-locations?specialties=abc&specialties=123`
+1. `/practitioner-locations?specialties.code=abc&specialties=123`
 1. `/practitioner-locations?nearAddress=NY 10021&nearMiles=3&specialties=abc`
 1. `/practitioner-locations?nearLon=-73.963654&nearLat=40.768673&nearMiles=3&specialties=abc`
 1. `/practitioner-locations?name.last=/^Z&sort=name.first`
 1. `/practitioner-locations?name.last=/^Z&sort=-name.first`
 1. `/practitioner-locations?name.last=/^Z&sort=name.last&sort=-name.first`
-1. `/practitioner-locations?clientId=1&networks.id=1&specialties=123`
-1. `/practitioner-locations?clientId=1&networks.id=1&specialties=123&includeOutOfNetwork=1`
-1. `/practitioner-locations?clientId=1&networks.id=1&specialties=123&includeCount=1`
+1. `/practitioner-locations?clientId=1&networks.id=1&specialties.code=123`
+1. `/practitioner-locations?clientId=1&networks.id=1&specialties.code=123&includeOutOfNetwork=1`
+1. `/practitioner-locations?clientId=1&networks.id=1&specialties.code=123&includeCount=1`
 
 ## notes
 
