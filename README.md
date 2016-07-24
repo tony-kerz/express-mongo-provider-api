@@ -6,18 +6,13 @@ this is an [express-js](http://expressjs.com/) app intended to serve up data ing
 
 this application supports the following api specifications
 
+- [/coordinates](doc/coordinates/get.md)
 - [/practitioner-locations](doc/practitioner-locations/index.md)
+- [/organization-locations](doc/organization-locations/index.md)
 
 ## data detail
 
-currently this app is going after this [materialized-view](https://github.com/tony-kerz/mongo-provider-ingest#provider-locations-1) which represents a many-to-many relationship between individual providers and locations.
-
-> there should be indexes on the following fields:
-- `name.first`
-- `name.last`
-- `identifiers.extension`
-- `specialties.code`
-- `geoPoint`
+currently this app is going after [materialized-views](https://en.wikipedia.org/wiki/Materialized_view) generated via [ETL](https://en.wikipedia.org/wiki/Extract,_transform,_load) routines in [this project](https://github.com/tony-kerz/mongo-provider-ingest)
 
 ## tech notes
 
