@@ -2,6 +2,7 @@ import 'babel-polyfill'
 import express from 'express'
 import debug from 'debug'
 import practitionerLocations from './practitioner-locations/routes'
+import organizationLocations from './organization-locations/routes'
 import coordinates from './coordinates/routes'
 const dbg = debug('app:practitioner-locations')
 const app = express()
@@ -16,6 +17,7 @@ app.get('/', (req, res)=>{
 })
 
 app.use('/practitioner-locations', practitionerLocations)
+app.use('/organization-locations', organizationLocations)
 app.use('/coordinates', coordinates)
 
 const port = 3000
