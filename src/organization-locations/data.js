@@ -3,9 +3,10 @@ import assert from 'assert'
 import debug from 'debug'
 import {getDb} from '../db'
 import constants from '../shared/constants'
-const dbg = debug('app:practitioner-locations:data')
 
-const collectionName = 'cmsProviderLocationsView'
+const dbg = debug('app:organization-locations:data')
+
+const collectionName = 'npiOrganizationLocationsView'
 
 export async function index(opts={}) {
   dbg('index: opts=%o', opts)
