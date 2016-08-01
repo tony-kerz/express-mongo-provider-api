@@ -6,7 +6,7 @@ import constants from '../shared/constants'
 
 const dbg = debug('app:organization-locations:data')
 
-const collectionName = 'npiOrganizationLocationsView'
+const collectionName = 'organizationLocationsView'
 
 export async function index(opts={}) {
   dbg('index: opts=%o', opts)
