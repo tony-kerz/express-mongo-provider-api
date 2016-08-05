@@ -6,6 +6,7 @@
 {
   client.id,
   networks.id,
+  networks.tier.rank,
   name.first: {regex: true},
   name.last: {regex: true},
   identifiers.extension: {regex: true},
@@ -28,12 +29,17 @@
     id: '5783ed60dfd7e6b6bff98a01',
     client: {
       id: '1',
-      text: 'banner'
+      text: 'Banner'
     },
     networks: [
       {
         id: '1',
-        text: 'network-1'
+        text: 'network-1',
+        tier: {
+          id: '1',
+          text: 'a-team',
+          rank: 3
+        }
       }
     ],
     name: {
@@ -43,7 +49,6 @@
       prefix: null,
       suffix: null
     },
-    npi: '1417954223',
     identifiers: [
       {
         authority: 'CMS',
@@ -83,15 +88,16 @@
 1. `/practitioner-locations?name.last=/^smi/i`
 1. `/practitioner-locations?name.last=/^SMI&name.first=/^J`
 1. `/practitioner-locations?identifiers.extension=12345`
-1. `/practitioner-locations?specialties.code=abc&specialties=123`
-1. `/practitioner-locations?nearAddress=NY 10021&nearMiles=3&specialties=abc`
-1. `/practitioner-locations?nearLon=-73.963654&nearLat=40.768673&nearMiles=3&specialties=abc`
+1. `/practitioner-locations?specialties.code=abc&specialties.code=123`
+1. `/practitioner-locations?nearAddress=NY 10021&nearMiles=3&specialties.code=abc`
+1. `/practitioner-locations?nearLon=-73.963654&nearLat=40.768673&nearMiles=3&specialties.code=abc`
 1. `/practitioner-locations?name.last=/^Z&sort=name.first`
 1. `/practitioner-locations?name.last=/^Z&sort=-name.first`
 1. `/practitioner-locations?name.last=/^Z&sort=name.last&sort=-name.first`
-1. `/practitioner-locations?clientId=1&networks.id=1&specialties.code=123`
-1. `/practitioner-locations?clientId=1&networks.id=1&specialties.code=123&includeOutOfNetwork=1`
-1. `/practitioner-locations?clientId=1&networks.id=1&specialties.code=123&includeCount=1`
+1. `/practitioner-locations?client.id=1&networks.id=1&specialties.code=123`
+1. `/practitioner-locations?client.id=1&networks.id=1&specialties.code=123&includeOutOfNetwork`
+1. `/practitioner-locations?client.id=1&networks.id=1&specialties.code=123&includeCount`
+1. `/practitioner-locations?client.id=1&networks.id=1&networks.tier.rank=2&specialties.code=123&includeCount`
 
 ## notes
 
@@ -102,7 +108,14 @@
 - `nearAddress` does not support regular-expressions
 - for `nearAddress` currently zip codes must be specified with state (e.g. `NY 10021`)
 - `nearMiles` will be only be considered for geo-searches
-- multiple values for `specialties` can be specified and will be treated as an "OR" operator
-- if `clientId` is not specified, service will only return records with an unspecified `clientId`
-- the `includeOutOfNetwork` flag can be used in combination with `clientId` to determine if the results include "out-of-network" providers (e.g. `includeOutOfNetwork=1`)
-- specify the `includeCount` flag to include the `x-total-count` header on response (e.g. `includeCount=1`)
+- multiple values for `specialties.code` can be specified and will be treated as an "OR" operator
+- if `client.id` is not specified, service will only return records with an unspecified `clientId`
+- use the `includeOutOfNetwork` flag (in combination with `client.id`) to include "out-of-network" providers in the response
+- use the `includeCount` flag to include the `x-total-count` header on response
+- `networks.tier.rank` will indicate the "minimum tier" to be included in the result (i.e. if a network has three tiers, `good`, `better`, and `best`, in ascending order of desirability, and the rank of `better` is specified as a filter, then the result will include practitioners in the `better` __and__ `best` tiers)
+
+> - `nearAddress` will incur a performance hit to geocode on the back-end, using the `nearLat`/`nearLon` parameter pair will avoid this
+
+<!-- -->
+
+> - `includeCount` will incur a performance hit, please avoid if not required for paging
