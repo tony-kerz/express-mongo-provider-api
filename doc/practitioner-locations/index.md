@@ -4,7 +4,7 @@
 
 ```
 {
-  clientId,
+  client.id,
   networks.id,
   name.first: {regex: true},
   name.last: {regex: true},
@@ -26,7 +26,10 @@
 [
   {
     id: '5783ed60dfd7e6b6bff98a01',
-    clientId: '1',
+    client: {
+      id: '1',
+      text: 'banner'
+    },
     networks: [
       {
         id: '1',
@@ -40,6 +43,7 @@
       prefix: null,
       suffix: null
     },
+    npi: '1417954223',
     identifiers: [
       {
         authority: 'CMS',
