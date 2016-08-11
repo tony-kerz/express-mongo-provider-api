@@ -2,7 +2,7 @@ import express from 'express'
 import debug from 'debug'
 import assert from 'assert'
 import geocode from 'geocodr'
-import nominatim from 'geocodr/dist/adapters/nominatim'
+//import nominatim from 'geocodr/dist/adapters/nominatim'
 import {dbgreq} from '../shared/express-helper'
 
 const dbg = debug('app:geocode:routes')
@@ -12,7 +12,8 @@ router.get('/', (req, res)=>{
   dbgreq(dbg, req)
   assert(req.query.address)
 
-  geocode(req.query.address, nominatim).then((coordinates)=>{
+  //geocode(req.query.address, nominatim).then((coordinates)=>{
+  geocode(req.query.address).then((coordinates)=>{
     res.send(coordinates)
   })
 })
