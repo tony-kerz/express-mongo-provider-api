@@ -2,6 +2,7 @@ import express from 'express'
 import debug from 'debug'
 import _ from 'lodash'
 import geocode from 'geocodr'
+//import nominatim from 'geocodr/dist/adapters/nominatim'
 import {Index, Meta} from '../shared/location-data'
 import {dbgreq} from '../shared/express-helper'
 
@@ -48,6 +49,7 @@ async function getOpts(req) {
     {}
   )
   if (req.query.nearAddress) {
+    //const coordinates = await geocode(req.query.nearAddress, nominatim)
     const coordinates = await geocode(req.query.nearAddress)
     opts.nearLon = coordinates[0]
     opts.nearLat = coordinates[1]

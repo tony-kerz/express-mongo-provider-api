@@ -24,53 +24,43 @@ export function Index(collectionName) {
       {}
     )
 
-    dbg('sort=%o', sort)
-
     const collection = db.collection(collectionName)
     const coordinates = getCoordinates(opts)
     const skip = opts.skip || 0
     const limit = opts.limit || 10
+    dbg('sort=%o, coordinates=%o', sort, coordinates)
+    const commonSteps = [
+      {$sort: {'client.id': 1}},
+      {
+        $group: {
+          _id: '$npi',
+          // see: https://docs.mongodb.com/manual/reference/aggregation-variables/#variable.ROOT
+          doc: {$last: '$$ROOT'}
+        }
+      },
+      {$sort: sort},
+      {$skip: skip},
+      {$limit: limit}
+    ]
+
     const cursor = coordinates ?
     collection.aggregate(
-      [
-        {
-          $geoNear: {
-            near: {type: 'Point', coordinates},
-            distanceField: 'distance',
-            maxDistance: (opts.nearMiles || 10)/constants.mileToMeterMultiplier,
-            query,
-            spherical: true,
-            distanceMultiplier: constants.mileToMeterMultiplier
-          }
-        },
-        {$sort: {'client.id': 1}},
-        {
-          $group: {
-            _id: '$npi',
-            // see: https://docs.mongodb.com/manual/reference/aggregation-variables/#variable.ROOT
-            doc: {$last: '$$ROOT'}
-          }
-        },
-        {$sort: {'doc.distance': 1}},
-        {$skip: skip},
-        {$limit: limit}
-      ]
+      [{
+        $geoNear: {
+          near: {type: 'Point', coordinates},
+          distanceField: 'distance',
+          maxDistance: (opts.nearMiles || 10)/constants.mileToMeterMultiplier,
+          query,
+          spherical: true,
+          distanceMultiplier: constants.mileToMeterMultiplier
+        }
+      }].concat(commonSteps),
+      {allowDiskUse: true}
     )
     :
     collection.aggregate(
-      [
-        {$match: query},
-        {$sort: {'client.id': 1}},
-        {
-          $group: {
-            _id: '$npi',
-            doc: {$last: '$$ROOT'}
-          }
-        },
-        {$sort: sort},
-        {$skip: skip},
-        {$limit: limit}
-      ]
+      [{$match: query}].concat(commonSteps),
+      {allowDiskUse: true}
     )
 
     const result = await cursor.toArray()
