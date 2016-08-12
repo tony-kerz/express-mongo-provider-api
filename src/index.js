@@ -19,6 +19,11 @@ app.get('/', (req, res)=>{
 app.use('/practitioner-locations', practitionerLocations)
 app.use('/organization-locations', organizationLocations)
 app.use('/coordinates', coordinates)
+// eslint-disable-next-line no-unused-vars
+app.use(function(err, req, res, next) {
+  dbg(err.stack)
+  res.status(500).send(`error: ${err}`)
+})
 
 const port = 3000
 app.listen(port, ()=>{

@@ -2,7 +2,6 @@ import express from 'express'
 import debug from 'debug'
 import _ from 'lodash'
 import geocode from 'geocodr'
-//import nominatim from 'geocodr/dist/adapters/nominatim'
 import {Index, Meta} from '../shared/location-data'
 import {dbgreq} from '../shared/express-helper'
 
@@ -14,21 +13,28 @@ export default function(collectionName) {
   const index = Index(collectionName)
   const meta = Meta(collectionName)
 
-  router.get('/', async (req, res)=>{
-    dbgreq(dbg, req)
-    const opts = await getOpts(req)
-    const promises = (parseInt(req.query.includeCount)) ? [index(opts), meta(opts)] : [index(opts)]
-    const results = await Promise.all(promises)
-    res.set('x-total-count', _.get(results[1], 'count'))
-    res.send(results[0])
+  router.get('/', async (req, res, next)=>{
+    try {
+      dbgreq(dbg, req)
+      const opts = await getOpts(req)
+      const promises = (parseInt(req.query.includeCount)) ? [index(opts), meta(opts)] : [index(opts)]
+      const results = await Promise.all(promises)
+      res.set('x-total-count', _.get(results[1], 'count'))
+      res.send(results[0])
+    } catch (err) {
+      next(err)
+    }
   })
 
-  router.get('/meta', (req, res)=>{
-    dbgreq(dbg, req)
+  router.get('/meta', async (req, res, next)=>{
+    try {
+      dbgreq(dbg, req)
 
-    meta(getOpts(req)).then((result)=>{
+      const result = await meta(await getOpts(req))
       res.send(result)
-    })
+    } catch (err) {
+      next(err)
+    }
   })
 
   return router
