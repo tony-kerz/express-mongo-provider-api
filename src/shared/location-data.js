@@ -29,7 +29,7 @@ export function Index(collectionName) {
     const skip = opts.skip || 0
     const limit = opts.limit || 10
     dbg('sort=%o, coordinates=%o', sort, coordinates)
-    const commonSteps = [
+    let commonSteps = [
       {$sort: {'client.id': 1}},
       {
         $group: {
@@ -37,11 +37,10 @@ export function Index(collectionName) {
           // see: https://docs.mongodb.com/manual/reference/aggregation-variables/#variable.ROOT
           doc: {$last: '$$ROOT'}
         }
-      },
-      {$sort: sort},
-      {$skip: skip},
-      {$limit: limit}
+      }
     ]
+    !_.isEmpty(sort) && commonSteps.push({$sort: sort})
+    commonSteps = commonSteps.concat([{$skip: skip}, {$limit: limit}])
 
     const cursor = coordinates ?
     collection.aggregate(
