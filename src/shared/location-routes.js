@@ -2,7 +2,6 @@ import express from 'express'
 import debug from 'debug'
 import _ from 'lodash'
 import geocode from 'geocodr'
-//import nominatim from 'geocodr/dist/adapters/nominatim'
 import {Index, Meta} from '../shared/location-data'
 import {dbgreq} from '../shared/express-helper'
 
