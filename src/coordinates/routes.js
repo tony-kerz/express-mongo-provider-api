@@ -7,27 +7,37 @@ import {dbgreq} from '../shared/express-helper'
 const dbg = debug('app:geocode:routes')
 const router = express.Router()
 
-router.get('/', (req, res)=>{
-  dbgreq(dbg, req)
-  assert(req.query.address)
+router.get('/', async (req, res, next)=>{
+  try {
+    dbgreq(dbg, req)
+    assert(req.query.address)
 
-  geocode(req.query.address).then((coordinates)=>{
+    const coordinates = await geocode(req.query.address)
     res.send(coordinates)
-  })
+  } catch (err) {
+    next(err)
+  }
 })
 
-router.get('/zips', (req, res)=>{
-  dbgreq(dbg, req)
-  res.send('[zips]')
+router.get('/zips', (req, res, next)=>{
+  try {
+    dbgreq(dbg, req)
+    res.send('[zips]')
+  } catch (err) {
+    next(err)
+  }
 })
 
-router.get('/:address', (req, res)=>{
-  dbgreq(dbg, req)
-  assert(req.params.address)
+router.get('/:address', async (req, res, next)=>{
+  try {
+    dbgreq(dbg, req)
+    assert(req.params.address)
 
-  geocode(req.params.address).then((coordinates)=>{
+    const coordinates = await geocode(req.params.address)
     res.send(coordinates)
-  })
+  } catch (err) {
+    next(err)
+  }
 })
 
 export default router
