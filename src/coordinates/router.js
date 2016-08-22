@@ -4,7 +4,7 @@ import assert from 'assert'
 import geocode from 'geocodr'
 import {dbgreq} from '../shared/express-helper'
 
-const dbg = debug('app:geocode:routes')
+const dbg = debug('app:coordinates:router')
 const router = express.Router()
 
 router.get('/', async (req, res, next)=>{
@@ -14,15 +14,6 @@ router.get('/', async (req, res, next)=>{
 
     const coordinates = await geocode(req.query.address)
     res.send(coordinates)
-  } catch (err) {
-    next(err)
-  }
-})
-
-router.get('/zips', (req, res, next)=>{
-  try {
-    dbgreq(dbg, req)
-    res.send('[zips]')
   } catch (err) {
     next(err)
   }
