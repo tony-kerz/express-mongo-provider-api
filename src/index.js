@@ -1,10 +1,11 @@
 import 'babel-polyfill'
 import express from 'express'
 import debug from 'debug'
-import practitionerLocations from './practitioner-locations/routes'
-import organizationLocations from './organization-locations/routes'
-import coordinates from './coordinates/routes'
-const dbg = debug('app:practitioner-locations')
+import practitionerLocationsRouter from './locations/practitioner/router'
+import organizationLocationsRouter from './locations/organization/router'
+import coordinatesRouter from './coordinates/router'
+import zipsRouter from './zips/router'
+const dbg = debug('app:index')
 const app = express()
 
 process.on('unhandledRejection', (err)=>{
@@ -16,9 +17,10 @@ app.get('/', (req, res)=>{
   res.send('api home...')
 })
 
-app.use('/practitioner-locations', practitionerLocations)
-app.use('/organization-locations', organizationLocations)
-app.use('/coordinates', coordinates)
+app.use('/practitioner-locations', practitionerLocationsRouter)
+app.use('/organization-locations', organizationLocationsRouter)
+app.use('/coordinates', coordinatesRouter)
+app.use('/zips', zipsRouter)
 // eslint-disable-next-line no-unused-vars
 app.use(function(err, req, res, next) {
   dbg(err.stack)

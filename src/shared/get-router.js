@@ -2,22 +2,22 @@ import express from 'express'
 import debug from 'debug'
 import _ from 'lodash'
 import geocode from 'geocodr'
-import {Index, Meta} from '../shared/location-data'
-import {dbgreq} from '../shared/express-helper'
+import {getIndex, getMeta, getZipCoordinates} from './data'
+import {dbgreq, isSet} from './express-helper'
+import {isZip} from './helper'
 
-const dbg = debug('app:shared:location-routes')
+const dbg = debug('app:shared:get-router')
 
-export default function(collectionName) {
+export default function(opts) {
   const router = express.Router()
-
-  const index = Index(collectionName)
-  const meta = Meta(collectionName)
+  const index = getIndex(opts)
+  const meta = getMeta(opts)
 
   router.get('/', async (req, res, next)=>{
     try {
       dbgreq(dbg, req)
       const opts = await getOpts(req)
-      const promises = (parseInt(req.query.includeCount)) ? [index(opts), meta(opts)] : [index(opts)]
+      const promises = (isSet(req.query.includeCount)) ? [index(opts), meta(opts)] : [index(opts)]
       const results = await Promise.all(promises)
       res.set('x-total-count', _.get(results[1], 'count'))
       res.send(results[0])
@@ -29,7 +29,6 @@ export default function(collectionName) {
   router.get('/meta', async (req, res, next)=>{
     try {
       dbgreq(dbg, req)
-
       const result = await meta(await getOpts(req))
       res.send(result)
     } catch (err) {
@@ -54,9 +53,12 @@ async function getOpts(req) {
     },
     {}
   )
-  if (req.query.nearAddress) {
-    //const coordinates = await geocode(req.query.nearAddress, nominatim)
-    const coordinates = await geocode(req.query.nearAddress)
+  const {nearAddress} = req.query
+  if (nearAddress) {
+    let coordinates = isZip(nearAddress) && await getZipCoordinates(nearAddress)
+    if (!coordinates) {
+      coordinates = await geocode(nearAddress)
+    }
     opts.nearLon = coordinates[0]
     opts.nearLat = coordinates[1]
   }
