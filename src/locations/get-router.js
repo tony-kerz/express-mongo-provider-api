@@ -15,7 +15,7 @@ export default function({collectionName, groupId}) {
       }
     ],
     docField: 'doc', // corresponds to 'doc' field above
-    optsHook: (opts) => {
+    queryHook: (opts) => {
       const clientId = _.get(opts, 'client.id')
       // important: if client.id is not set, only return public data (where client.id = null)
       opts['client.id'] = clientId ? (isSet(opts.includeOutOfNetwork) ? [clientId, null] : clientId) : null
