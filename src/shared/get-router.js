@@ -4,7 +4,7 @@ import _ from 'lodash'
 import geocode from 'geocodr'
 import {getIndex, getMeta, getZipCoordinates} from './data'
 import {dbgreq, isSet} from './express-helper'
-import {isZip} from './helper'
+import {isZip5} from './helper'
 
 const dbg = debug('app:shared:get-router')
 
@@ -55,7 +55,7 @@ async function getOpts(req) {
   )
   const {nearAddress} = req.query
   if (nearAddress) {
-    let coordinates = isZip(nearAddress) && await getZipCoordinates(nearAddress)
+    let coordinates = isZip5(nearAddress) && await getZipCoordinates(nearAddress)
     if (!coordinates) {
       coordinates = await geocode(nearAddress)
     }

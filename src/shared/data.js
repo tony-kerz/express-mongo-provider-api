@@ -5,60 +5,60 @@ import {getDb} from './db'
 const dbg = debug('app:shared:data')
 
 const mileToMeterMultiplier = 0.00062137
+const nearMilesDefault = 10
+
 /*
 generic functions to handle mongo queries consistently handling options including:
 - skip, limit, sort, nearLat, nearLon, and nearMiles
 */
 
 /**
-transform options object into something that can be used as mongo query
-@callback optsHook
-@param  {Object} opts - options passed to routine
-@returns {Object} resultant opts
+@callback queryHook
+@param  {Object} opts - options passed to routine (may contain stuff that will choke mongo)
+@returns {Object} options object that can be used directly by a mongo query
 */
 
 /**
-@typedef MongoQueryOpts
-@type {Object}
+@typedef {Object} GetMongoDataOpts
 @property {string} collectionName - mongo collection name
 @property {Object[]} [steps] - mongo aggregation steps
 @property {string} [docField] - field name used when using $$ROOT syntax in $group
-@property {optsHook} [optsHook] - transform options
+@property {queryHook} [queryHook] - transform options
 */
 
 /**
-@param {MongoQueryOpts} outerOpts
+@typedef {Object} MongoDataOpts
+@property {Object} [sort]
+@property {number} [nearLat] - lat to use for geo query
+@property {number} [nearLon] - lon to use for geo query
+@property {number} [nearMiles=10] - radius in miles to use for geo query
+@property {number} [skip=0] - skip of skip/limit fame
+@property {number} [limit=10] - limit of skip/limit fame
+*/
+
+/**
+@callback MongoIndex
+@param  {MongoDataOpts}
 @returns {Object[]} mongo result set
 */
-export function getIndex(outerOpts) {
-  dbg('get-index: opts=%o', outerOpts)
-  return async function index(opts={}) {
-    dbg('index: opts=%o', opts)
-    const db = await getDb()
-    const query = getQuery(outerOpts, opts)
-    const prefix = outerOpts.docField ? `${outerOpts.docField}.` : ''
-    const sort = _.reduce(
-      opts.sort ? (Array.isArray(opts.sort) ? opts.sort : [opts.sort]) : [],
-      (result, value)=>{
-        // prepend 'doc' here to operate on embedded 'doc' field used in conjunction with $$ROOT below
-        if (value.startsWith('-')) {
-          result[`${prefix}${value.substring(1)}`] = -1
-        } else {
-          result[`${prefix}${value}`] = 1
-        }
-        return result
-      },
-      {}
-    )
 
-    const collection = db.collection(outerOpts.collectionName)
-    const coordinates = getCoordinates(opts)
-    const skip = opts.skip || 0
-    const limit = opts.limit || 10
-    dbg('sort=%o, coordinates=%o', sort, coordinates)
-    let steps = outerOpts.steps || []
-    !_.isEmpty(sort) && steps.push({$sort: sort})
-    steps = steps.concat([{$skip: skip}, {$limit: limit}])
+/**
+@param {GetMongoDataOpts}
+@returns {MongoIndex}
+*/
+export function getIndex({collectionName, steps=[], docField, queryHook}) {
+  dbg('get-index: collection=%o', collectionName)
+  return async function({sort, nearLat, nearLon, nearMiles=nearMilesDefault, skip=0, limit=10}) {
+    dbg('index: args=%o', arguments[0])
+    const db = await getDb()
+    const query = getQuery({opts: arguments[0], queryHook})
+
+    const collection = db.collection(collectionName)
+    const coordinates = getCoordinates({nearLat, nearLon})
+
+    let _steps = [...steps]
+    !_.isEmpty(sort) && _steps.push({$sort: getSort({sort, prefix: docField})})
+    _steps = _steps.concat([{$skip: skip}, {$limit: limit}])
 
     const cursor = coordinates ?
     collection.aggregate(
@@ -66,54 +66,82 @@ export function getIndex(outerOpts) {
         $geoNear: {
           near: {type: 'Point', coordinates},
           distanceField: 'distance',
-          maxDistance: (opts.nearMiles || 10)/mileToMeterMultiplier,
+          maxDistance: nearMiles/mileToMeterMultiplier,
           query,
           spherical: true,
           distanceMultiplier: mileToMeterMultiplier
         }
-      }].concat(steps),
+      }].concat(_steps),
       {allowDiskUse: true}
     )
     :
     collection.aggregate(
-      [{$match: query}].concat(steps),
+      [{$match: query}].concat(_steps),
       {allowDiskUse: true}
     )
 
     const result = await cursor.toArray()
-    return outerOpts.docField ? result.map((elt) => {
-      return {...elt[outerOpts.docField]}
+    return docField ? result.map((elt) => {
+      return {...elt[docField]}
     }) : result
   }
 }
 
-export function getMeta(outerOpts) {
-  dbg('get-meta: opts=%o', outerOpts)
-  return async function meta(opts={}) {
-    dbg('meta: opts=%o', opts)
+/**
+@typedef {Object} MetaResponse
+@property {number} count number of documents meeting search criteria
+*/
+
+/**
+@callback MongoMeta
+@param  {MongoDataOpts}
+@returns {MetaResponse}
+*/
+
+/**
+@param {GetMongoDataOpts}
+@returns {MongoMeta}
+*/
+export function getMeta({collectionName, steps, queryHook}) {
+  dbg('get-meta: collection=%o', collectionName)
+  return async function({nearLat, nearLon, nearMiles=nearMilesDefault}) {
+    dbg('index: args=%o', arguments[0])
     const db = await getDb()
-    const query = getQuery(outerOpts, opts)
-    const collection = db.collection(outerOpts.collectionName)
-    const coordinates = getCoordinates(opts)
+    const query = getQuery({opts: arguments[0], queryHook})
+    const collection = db.collection(collectionName)
+    const coordinates = getCoordinates({nearLat, nearLon})
+    const _steps = steps.concat([{$group: {_id: null, count: {$sum: 1}}}])
     const countCursor = coordinates ?
-    collection.find({
-      ...query,
-      geoPoint: {
-        $near: {
-          $geometry: {type: 'Point', coordinates},
-          $maxDistance: (opts.nearMiles || 10)/mileToMeterMultiplier
+    collection.aggregate(
+      [{
+        $geoNear: {
+          near: {type: 'Point', coordinates},
+          distanceField: 'distance',
+          maxDistance: nearMiles/mileToMeterMultiplier,
+          query,
+          spherical: true,
+          distanceMultiplier: mileToMeterMultiplier
         }
-      }
-    })
+      }].concat(_steps),
+      {allowDiskUse: true}
+    )
     :
-    collection.find(query)
+    collection.aggregate(
+      [{$match: query}].concat(_steps),
+      {allowDiskUse: true}
+    )
 
-    const count = await countCursor.count()
-
-    return {count}
+    const result = await countCursor.toArray()
+    assert(result.length === 1)
+    dbg('get-meta: result=%o', result)
+    return result[0]
   }
 }
 
+/**
+@param {string} zip - string representing zip code
+@returns {Array} array of form [lon, lat]
+*/
 export async function getZipCoordinates(zip) {
   const db = await getDb()
   const result = await db.collection('geozip').find({zip}).toArray()
@@ -127,11 +155,16 @@ export async function getZipCoordinates(zip) {
   }
 }
 
-function getQuery(outerOpts, opts) {
-  opts = outerOpts.optsHook ? outerOpts.optsHook({...opts}) : opts
+/**
+@param {Object} opts - options object
+@param {queryHook} [queryHook]
+@returns {Object} object suitable to specify mongo sort operation
+*/
+function getQuery({opts, queryHook}) {
+  const _opts = queryHook ? queryHook({...opts}) : opts
 
   return _.transform(
-    opts,
+    _opts,
     (result, value, key)=>{
       if (!['skip', 'limit', 'sort', 'nearLat', 'nearLon', 'nearMiles'].includes(key)) {
         if (Array.isArray(value)) {
@@ -148,6 +181,34 @@ function getQuery(outerOpts, opts) {
   )
 }
 
-function getCoordinates(opts) {
-  return (opts.nearLat && opts.nearLon) ? [opts.nearLon, opts.nearLat] : null
+/**
+@param {(string|string[])} sort - fields to sort by potentially prefixed with "-" indicating descending sort
+@param {string} [prefix] - optional prefix when fields are in parent
+@returns {Object} object suitable to specify mongo sort operation
+*/
+function getSort({sort, prefix}) {
+  const _prefix = prefix ? `${prefix}.` : ''
+  const _sort = _.reduce(
+    sort ? (Array.isArray(sort) ? sort : [sort]) : [],
+    (result, value)=>{
+      if (value.startsWith('-')) {
+        result[`${_prefix}${value.substring(1)}`] = -1
+      } else {
+        result[`${_prefix}${value}`] = 1
+      }
+      return result
+    },
+    {}
+  )
+  dbg('get-sort: sort=%o, result=%o', sort, _sort)
+  return _sort
+}
+
+/**
+@param {number} nearLat - latitude coordinate
+@param {number} nearLon - longitude coordinate
+@returns {Array} array of form [lon, lat] or null
+*/
+function getCoordinates({nearLat, nearLon}) {
+  return (nearLat && nearLon) ? [nearLon, nearLat] : null
 }
